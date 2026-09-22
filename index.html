@@ -1,0 +1,52 @@
+<script>
+function recomputeSize() {
+  ctx.font = getComputedStyle(body).font;
+
+  const m = ctx.measureText("M");
+  const charWidth = m.width;
+  const charHeight = m.fontBoundingBoxAscent + m.fontBoundingBoxDescent;
+
+  size = {
+    w: Math.floor(document.documentElement.clientWidth / charWidth),
+    h: Math.floor(document.documentElement.clientHeight / charHeight),
+  };
+
+  body.innerText = ("a".repeat(size.w) + "\n").repeat(size.h);
+}
+
+function main() {
+  body = document.body;
+  ctx = document.createElement("canvas").getContext("2d");
+
+  body.style.backgroundColor = "black";
+  body.style.color = "#00AA00";
+  body.style.fontFamily = "JetBrains Mono Nerd";
+  body.style.fontSize = "16px";
+  body.style.lineHeight = "16px";
+  body.style.width = "100vw";
+  body.style.height = "100vh";
+  body.style.margin = "0";
+  body.style.whiteSpace = "pre";
+
+  recomputeSize();
+
+  new ResizeObserver(recomputeSize).observe(document.documentElement);
+}
+
+var body, ctx, size;
+var buffer = "";
+
+document.addEventListener("DOMContentLoaded", () => {
+  const fontFile = new FontFace(
+    "JetBrains Mono Nerd",
+    'url("https://cdn.jsdelivr.net/gh/Nick2bad4u/nerd-fonts-woff2@main/fonts/woff2/DejaVuSansMono/DejaVuSansMNerdFont-Regular.woff2")',
+  );
+
+  document.fonts.add(fontFile);
+
+  fontFile.load().then(
+    () => main(),
+    (err) => console.error(err),
+  );
+});
+</script>
