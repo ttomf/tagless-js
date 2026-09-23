@@ -2,8 +2,10 @@
 const HEIGHT = 16;
 
 function draw() {
+  const tmpBuffer = structuredClone(buffer);
+  tmpBuffer[cursor.y][cursor.x] = "█";
   let drawBuffer = [];
-  for (let i of buffer) {
+  for (let i of tmpBuffer) {
     drawBuffer.push(i.join(""));
   }
   body.innerText = drawBuffer.join("\n");
@@ -32,9 +34,8 @@ function recomputeSize() {
   }
 
   if (delta < 0) {
-    const removed = -delta;
-    buffer.splice(0, removed);
-    cursor.y -= removed;
+    buffer.splice(0, -delta);
+    cursor.y += delta;
   }
 
   cursor.y = Math.max(0, Math.min(cursor.y, size.h - 1));
@@ -48,6 +49,61 @@ function recomputeSize() {
   }
 
   draw();
+}
+
+function input(letter) {
+  if (/^\P{Cc}$/u.test(letter)) {
+    if (cursor.x + 1 < size.w) {
+      print(letter);
+    }
+  } else if (letter == "Enter") {
+    print("\n\r");
+  } else if (letter == "Backspace") {
+    print("\b");
+  }
+  draw();
+}
+
+function print(text, where = undefined) {
+  let pos = where;
+  if (where === undefined) {
+    pos = {
+      x: cursor.x,
+      y: cursor.y,
+    };
+  }
+  let origPos = pos;
+  if (pos.y + 1 > size.h) {
+    buffer.shift();
+    buffer.push(Array(size.w).fill(" "));
+    pos.y -= 1;
+  }
+  for (const [i, l] of Array.from(text).entries()) {
+    if (/^\P{Cc}$/u.test(l)) {
+      buffer[pos.y][pos.x + i] = l;
+      if (where === undefined) {
+        cursor.x = pos.x + i + 1;
+      }
+      draw();
+    }
+    if (l == "\n") {
+      print(text.slice(i + 1), { x: origPos.x, y: origPos.y + 1 });
+      break;
+    }
+    if (l == "\r") {
+      pos.x = 0;
+      cursor.x = 0;
+    }
+    if (l == "\b") {
+      if (pos.x > 0) {
+        buffer[pos.y][pos.x + i] = " ";
+        pos.x -= 1;
+        if (where === undefined) {
+          cursor.x = pos.x + i;
+        }
+      }
+    }
+  }
 }
 
 function main() {
@@ -67,6 +123,11 @@ function main() {
   recomputeSize();
 
   new ResizeObserver(recomputeSize).observe(document.documentElement);
+
+  body.addEventListener("keydown", (e) => {
+    if (!e.key.startsWith("F")) e.preventDefault();
+    input(e.key);
+  });
 }
 
 var body, ctx;
