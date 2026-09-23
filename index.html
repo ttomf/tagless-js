@@ -1,17 +1,53 @@
 <script>
+const HEIGHT = 16;
+
+function draw() {
+  let drawBuffer = [];
+  for (let i of buffer) {
+    drawBuffer.push(i.join(""));
+  }
+  body.innerText = drawBuffer.join("\n");
+}
+
 function recomputeSize() {
   ctx.font = getComputedStyle(body).font;
-
   const m = ctx.measureText("M");
-  const charWidth = m.width;
-  const charHeight = m.fontBoundingBoxAscent + m.fontBoundingBoxDescent;
 
-  size = {
-    w: Math.floor(document.documentElement.clientWidth / charWidth),
-    h: Math.floor(document.documentElement.clientHeight / charHeight),
+  const newSize = {
+    w: Math.floor(document.documentElement.clientWidth / m.width),
+    h: Math.floor(document.documentElement.clientHeight / HEIGHT),
   };
 
-  body.innerText = ("a".repeat(size.w) + "\n").repeat(size.h);
+  const delta = newSize.h - size.h;
+
+  size = newSize;
+
+  if (delta > 0) {
+    buffer.unshift(
+      ...Array(delta)
+        .fill(null)
+        .map(() => []),
+    );
+    cursor.y += delta;
+  }
+
+  if (delta < 0) {
+    const removed = -delta;
+    buffer.splice(0, removed);
+    cursor.y -= removed;
+  }
+
+  cursor.y = Math.max(0, Math.min(cursor.y, size.h - 1));
+
+  for (const line of buffer) {
+    if (line.length < size.w) {
+      line.push(...Array(size.w - line.length).fill(" "));
+    } else if (line.length > size.w) {
+      line.splice(size.w);
+    }
+  }
+
+  draw();
 }
 
 function main() {
@@ -22,7 +58,7 @@ function main() {
   body.style.color = "#00AA00";
   body.style.fontFamily = "JetBrains Mono Nerd";
   body.style.fontSize = "16px";
-  body.style.lineHeight = "16px";
+  body.style.lineHeight = HEIGHT + "px";
   body.style.width = "100vw";
   body.style.height = "100vh";
   body.style.margin = "0";
@@ -33,8 +69,17 @@ function main() {
   new ResizeObserver(recomputeSize).observe(document.documentElement);
 }
 
-var body, ctx, size;
-var buffer = "";
+var body, ctx;
+var buffer = [];
+var size = {
+  w: 0,
+  h: 0,
+};
+var cursor = {
+  x: 0,
+  y: 0,
+  canWrite: true,
+};
 
 document.addEventListener("DOMContentLoaded", () => {
   const fontFile = new FontFace(
