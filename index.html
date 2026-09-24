@@ -1,5 +1,17 @@
 <script>
 const HEIGHT = 16;
+const HELP = `
+info:
+  This is site created only using <script> tags,
+  it runs in <body> with some styling (using JS).
+
+  GitHub repo: https://github.com/ttomf/tagless-js
+
+commands:
+  help           print this help message
+  echo <text>    print <text>
+
+`;
 
 function draw() {
   const tmpBuffer = structuredClone(buffer);
@@ -51,20 +63,45 @@ function recomputeSize() {
   draw();
 }
 
+function run(cmd) {
+  const args = cmd.split(" ");
+  switch (args[0]) {
+    case "":
+      print("\n");
+      break;
+    case "echo":
+      print("\n" + args?.[1] + "\n");
+      break;
+    case "help":
+      print(HELP);
+      break;
+    default:
+      print("\nUnknown command: " + args[0] + ". Try `help`.\n");
+      break;
+  }
+}
+
 function input(letter) {
-  if (/^\P{Cc}$/u.test(letter)) {
-    if (cursor.x + 1 < size.w) {
-      print(letter);
+  if (cursor.canWrite) {
+    let line = buffer[cursor.y].join("");
+    if (/^\P{Cc}$/u.test(letter)) {
+      if (cursor.x + 1 < size.w) {
+        print(letter);
+      }
+    } else if (letter == "Enter") {
+      let cmd = line.slice(line.lastIndexOf("# ") + 2, cursor.x);
+      console.log(cmd);
+      run(cmd);
+      print("# ");
+    } else if (letter == "Backspace") {
+      if (line.slice(line.lastIndexOf("# "), cursor.x) != "# ") print("\b");
     }
-  } else if (letter == "Enter") {
-    print("\n\r");
-  } else if (letter == "Backspace") {
-    print("\b");
   }
   draw();
 }
 
 function print(text, where = undefined) {
+  let offset = 0;
   let pos = where;
   if (where === undefined) {
     pos = {
@@ -72,7 +109,6 @@ function print(text, where = undefined) {
       y: cursor.y,
     };
   }
-  let origPos = pos;
   if (pos.y + 1 > size.h) {
     buffer.shift();
     buffer.push(Array(size.w).fill(" "));
@@ -80,15 +116,28 @@ function print(text, where = undefined) {
   }
   for (const [i, l] of Array.from(text).entries()) {
     if (/^\P{Cc}$/u.test(l)) {
-      buffer[pos.y][pos.x + i] = l;
-      if (where === undefined) {
-        cursor.x = pos.x + i + 1;
+      if (pos.x + i - offset + 1 < size.w) {
+        buffer[pos.y][pos.x + i - offset] = l;
+        if (where === undefined) {
+          cursor.x = pos.x + i - offset + 1;
+        }
+        draw();
       }
-      draw();
     }
     if (l == "\n") {
-      print(text.slice(i + 1), { x: origPos.x, y: origPos.y + 1 });
-      break;
+      offset = i + 1;
+      if (where === undefined) {
+        cursor.x = 0;
+        cursor.y += 1;
+      }
+      pos.x = 0;
+      pos.y += 1;
+      if (pos.y + 1 > size.h) {
+        buffer.shift();
+        buffer.push(Array(size.w).fill(" "));
+        pos.y -= 1;
+        cursor.y -= 1;
+      }
     }
     if (l == "\r") {
       pos.x = 0;
@@ -123,6 +172,9 @@ function main() {
   recomputeSize();
 
   new ResizeObserver(recomputeSize).observe(document.documentElement);
+
+  print(HELP);
+  print("# ");
 
   body.addEventListener("keydown", (e) => {
     if (!e.key.startsWith("F")) e.preventDefault();
