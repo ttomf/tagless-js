@@ -10,6 +10,10 @@ info:
 commands:
   help           print this help message
   echo <text>    print <text>
+  ls             print all files
+  touch <file>   create empty <file>
+  rm <file>      delete <file>
+  cat <file>     print content of <file>
 
 `;
 
@@ -70,10 +74,46 @@ function run(cmd) {
       print("\n");
       break;
     case "echo":
-      print("\n" + args?.[1] + "\n");
+      print("\n" + (args?.[1] ?? "") + "\n");
       break;
     case "help":
       print(HELP);
+      break;
+    case "ls":
+      print("\n" + Object.keys(files).join(" ") + "\n");
+      break;
+    case "touch":
+      if (args[1]) {
+        files[args[1]] = "";
+        localStorage.setItem("files", JSON.stringify(files));
+        print("\n");
+      } else {
+        print("\nNo file specified. Try `help`.\n");
+      }
+      break;
+    case "rm":
+      if (args[1]) {
+        if (args[1] in files) {
+          delete files[args[1]];
+          localStorage.setItem("files", JSON.stringify(files));
+          print("\n");
+        } else {
+          print("\nFile " + args[1] + " doesn't exist.\n");
+        }
+      } else {
+        print("\nNo file specified. Try `help`.\n");
+      }
+      break;
+    case "cat":
+      if (args[1]) {
+        if (args[1] in files) {
+          print(files[args[1]] + "\n");
+        } else {
+          print("\nFile " + args[1] + " doesn't exist.\n");
+        }
+      } else {
+        print("\nNo file specified. Try `help`.\n");
+      }
       break;
     default:
       print("\nUnknown command: " + args[0] + ". Try `help`.\n");
@@ -90,11 +130,12 @@ function input(letter) {
       }
     } else if (letter == "Enter") {
       let cmd = line.slice(line.lastIndexOf("# ") + 2, cursor.x);
-      console.log(cmd);
       run(cmd);
       print("# ");
     } else if (letter == "Backspace") {
       if (line.slice(line.lastIndexOf("# "), cursor.x) != "# ") print("\b");
+    } else {
+      console.log(letter);
     }
   }
   draw();
@@ -184,6 +225,7 @@ function main() {
 
 var body, ctx;
 var buffer = [];
+var files = JSON.parse(localStorage.getItem("files") ?? "{}");
 var size = {
   w: 0,
   h: 0,
