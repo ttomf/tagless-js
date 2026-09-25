@@ -1,5 +1,5 @@
 <script>
-const HEIGHT = 16;
+const HEIGHT = 18;
 const HELP = `
 info:
   This is site created only using <script> tags,
@@ -8,12 +8,12 @@ info:
   GitHub repo: https://github.com/ttomf/tagless-js
 
 commands:
-  help           print this help message
-  echo <text>    print <text>
-  ls             print all files
-  touch <file>   create empty <file>
-  rm <file>      delete <file>
-  cat <file>     print content of <file>
+  help                 print this help message
+  echo <text> <file?>  print <text>, optionally to <file>
+  ls                   print all files
+  touch <file>         create empty <file>
+  rm <file>            delete <file>
+  cat <file>           print content of <file>
 
 `;
 
@@ -68,13 +68,25 @@ function recomputeSize() {
 }
 
 function run(cmd) {
-  const args = cmd.split(" ");
+  const args =
+    cmd.match(/"[^"]*"|\S+/g)?.map((arg) => arg.replace(/^"|"$/g, "")) || [];
+
   switch (args[0]) {
     case "":
       print("\n");
       break;
     case "echo":
-      print("\n" + (args?.[1] ?? "") + "\n");
+      if (args[1]) {
+        if (args[2]) {
+          files[args[2]] = args[1].replaceAll("\\n", "\n");
+          localStorage.setItem("files", JSON.stringify(files));
+          print("\n");
+        } else {
+          print("\n" + (args[1].replaceAll("\\n", "\n") ?? "") + "\n");
+        }
+      } else {
+        print("\n");
+      }
       break;
     case "help":
       print(HELP);
@@ -107,7 +119,7 @@ function run(cmd) {
     case "cat":
       if (args[1]) {
         if (args[1] in files) {
-          print(files[args[1]] + "\n");
+          print("\n" + files[args[1]] + "\n");
         } else {
           print("\nFile " + args[1] + " doesn't exist.\n");
         }
