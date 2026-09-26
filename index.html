@@ -1,25 +1,60 @@
 <script>
 const HEIGHT = 18;
 const HELP = `
+commands:
+  help                 print this help message
+  info                 print info about this
+  neofetch             print fancy system info
+
+  echo <text> <file?>  print <text>, optionally to <file>
+
+  ls                   print all files
+  touch <file>         create empty <file>
+  rm <file>            delete <file>
+  cat <file>           print content of <file>
+
+  reset                reset the page and clean storage
+  eval <command>       execute JS code and return output
+
+  date                 print date and time
+  whoami               print user name
+
+  spoil                print all easter eggs here
+
+`;
+const INFO = `
 info:
   This is site created only using <script> tags,
   it runs in <body> with some styling (using JS).
 
   GitHub repo: https://github.com/ttomf/tagless-js
 
-commands:
-  help                 print this help message
-  echo <text> <file?>  print <text>, optionally to <file>
-  ls                   print all files
-  touch <file>         create empty <file>
-  rm <file>            delete <file>
-  cat <file>           print content of <file>
-
+Try \`help\` for all commands.
+`;
+const SPOIL = `
+rm -rf /
+sudo rm -rf /
+exit
+vim
+kill 1
+:(){ :|:& };:
+`;
+const NEOFETCH = `
+                             guest@tagless-js
+   ▄▄▄▄      ██  ▄▄▄▄        ----------------
+ ▄██▀▀▀     ██   ▀▀▀██▄      OS: TaglessJS
+██         ██         ██     Host: Browser
+ ▀██▄▄▄   ██     ▄▄▄██▀      Files: $FILES
+   ▀▀▀▀  ██      ▀▀▀▀        Storage: localStorage
+        Tagless              Time: $TIME
+                             Terminal size: $SIZE
 `;
 
 function draw() {
   const tmpBuffer = structuredClone(buffer);
-  tmpBuffer[cursor.y][cursor.x] = "█";
+  if (cursor.canWrite) {
+    tmpBuffer[cursor.y][cursor.x] = "█";
+  }
   let drawBuffer = [];
   for (let i of tmpBuffer) {
     drawBuffer.push(i.join(""));
@@ -68,8 +103,61 @@ function recomputeSize() {
 }
 
 function run(cmd) {
-  const args =
-    cmd.match(/"[^"]*"|\S+/g)?.map((arg) => arg.replace(/^"|"$/g, "")) || [];
+  switch (cmd) {
+    case "rm -rf /":
+      print("\nNice try.\n");
+      return;
+    case "sudo rm -rf /":
+      print("\nDeleting system...\n");
+      print("Done.");
+      cursor.canWrite = false;
+      setInterval(() => {
+        const chars =
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        for (let i = 0; i < 100; i++) {
+          buffer[Math.floor(Math.random() * size.h)][
+            Math.floor(Math.random() * size.w)
+          ] = chars[Math.floor(Math.random() * chars.length)];
+        }
+        print("---SYSTEM CRASH---", {
+          x: Math.floor(size.w / 2) - 9,
+          y: Math.floor(size.h / 2),
+        });
+        draw();
+      }, 0);
+      return;
+    case "exit":
+      print("\nThere is no escape.\n");
+      return;
+    case "vim":
+      print("\nYou think you could exit it?\n");
+      return;
+    case "kill 1":
+      cursor.canWrite = false;
+      setTimeout(() => {
+        for (let x = 0; x < size.w; x++) {
+          for (let y = 0; y < size.h; y++) {
+            buffer[y][x] = " ";
+          }
+        }
+        draw();
+      }, 0);
+      return;
+    case ":(){ :|:& };:":
+      cursor.canWrite = false;
+      print(
+        "\nWHAT ARE YOU TRYING TO DO???\nAnyway here you go...\nStarting while (true);\n",
+      );
+      draw();
+      setTimeout(() => {
+        while (true);
+      }, 0);
+      return;
+  }
+
+  const args = cmd
+    .match(/"[^"]*"|\S+/g)
+    ?.map((arg) => arg.replace(/^"|"$/g, "")) || [""];
 
   switch (args[0]) {
     case "":
@@ -90,6 +178,9 @@ function run(cmd) {
       break;
     case "help":
       print(HELP);
+      break;
+    case "info":
+      print(INFO);
       break;
     case "ls":
       print("\n" + Object.keys(files).join(" ") + "\n");
@@ -127,6 +218,36 @@ function run(cmd) {
         print("\nNo file specified. Try `help`.\n");
       }
       break;
+    case "reset":
+      localStorage.clear();
+      window.location.reload();
+      break;
+    case "eval":
+      print("\n" + eval(args?.[1] ?? "") + "\n");
+      break;
+    case "date":
+      print("\n" + new Date().toString() + "\n");
+      break;
+    case "whoami":
+      print("\nguest\n");
+      break;
+    case "neofetch":
+      const now = new Date();
+      const time =
+        String(now.getHours()).padStart(2, "0") +
+        ":" +
+        String(now.getMinutes()).padStart(2, "0") +
+        ":" +
+        String(now.getSeconds()).padStart(2, "0");
+      print(
+        NEOFETCH.replace("$FILES", Object.keys(files).length)
+          .replace("$TIME", time)
+          .replace("$SIZE", size.w + "x" + size.h),
+      );
+      break;
+    case "spoil":
+      print(SPOIL);
+      break;
     default:
       print("\nUnknown command: " + args[0] + ". Try `help`.\n");
       break;
@@ -142,8 +263,10 @@ function input(letter) {
       }
     } else if (letter == "Enter") {
       let cmd = line.slice(line.lastIndexOf("# ") + 2, cursor.x);
-      run(cmd);
-      print("# ");
+      run(cmd.trim());
+      if (cursor.canWrite) {
+        print("# ");
+      }
     } else if (letter == "Backspace") {
       if (line.slice(line.lastIndexOf("# "), cursor.x) != "# ") print("\b");
     } else {
@@ -226,7 +349,8 @@ function main() {
 
   new ResizeObserver(recomputeSize).observe(document.documentElement);
 
-  print(HELP);
+  run("neofetch");
+  run("info");
   print("# ");
 
   body.addEventListener("keydown", (e) => {
