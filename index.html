@@ -1,4 +1,4 @@
-<script>
+// <script>
 const HEIGHT = 18;
 const HELP = `
 commands:
@@ -223,7 +223,13 @@ function run(cmd) {
       window.location.reload();
       break;
     case "eval":
-      print("\n" + eval(args?.[1] ?? "") + "\n");
+      let out;
+      try {
+        out = eval(args?.[1] ?? "");
+      } catch {
+        out = "ERROR!";
+      }
+      print("\n" + out + "\n");
       break;
     case "date":
       print("\n" + new Date().toString() + "\n");
@@ -385,4 +391,4 @@ document.addEventListener("DOMContentLoaded", () => {
     (err) => console.error(err),
   );
 });
-</script>
+// </script>
